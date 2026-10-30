@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from models.user_model import User
@@ -51,21 +51,40 @@ class UserService:
 
         return UserRepository.create(db, user)
 
+
     @staticmethod
     def get_users(db: Session):
         return UserRepository.get_all_active(db)
 
+
     @staticmethod
-    def get_user(db: Session, user_id: uuid.UUID):
+    def get_user(db: Session, user_id: uuid.UUID, current_user):
+        is_same_user = current_user.id == user_id
+
+        user_role = (
+            current_user.user_role.name.strip().lower()
+            if current_user.user_role
+            else ""
+        )
+
+        is_admin = user_role in ["admin", "super admin"]
+
+        if not is_same_user and not is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied.",
+            )
+
         user = UserRepository.get_by_id(db, user_id)
 
-        if user is None or user.is_deleted:
+        if not user or user.is_deleted:
             raise HTTPException(
-                status_code=404,
-                detail="User not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
             )
 
         return user
+
 
     @staticmethod
     def update_user(

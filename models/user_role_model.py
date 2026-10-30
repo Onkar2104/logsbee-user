@@ -7,7 +7,7 @@ from sqlalchemy import (
     Uuid,
     Text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
 
 from models.base import Base
@@ -25,6 +25,11 @@ class UserRole(Base):
         Uuid(as_uuid=True, native_uuid=False),
         primary_key=True,
         default=uuid.uuid4,
+    )
+
+    users = relationship(
+        "User",
+        back_populates="user_role",
     )
 
     name: Mapped[str] = mapped_column(

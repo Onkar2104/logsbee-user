@@ -9,7 +9,7 @@ from sqlalchemy import (
     Text,
     Uuid,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
 
 from models.base import Base
@@ -75,6 +75,12 @@ class User(Base):
         ForeignKey("user_roles.id"),
         nullable=False,
         index=True,
+    )
+
+    user_role = relationship(
+        "UserRole",
+        back_populates="users",
+        lazy="select",
     )
 
     is_two_factor_authenticated: Mapped[bool] = mapped_column(

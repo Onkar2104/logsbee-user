@@ -20,8 +20,8 @@ class UserController:
 
 
     @staticmethod
-    def get_user(db: Session, user_id: uuid.UUID):
-        return UserService.get_user(db, user_id)
+    def get_user(db: Session, user_id: uuid.UUID, current_user):
+        return UserService.get_user(db, user_id, current_user)
 
 
     @staticmethod

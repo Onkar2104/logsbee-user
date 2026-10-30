@@ -3,7 +3,8 @@ import uuid
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from database import get_db
+from core.database import get_db
+from core.auth_dependencies import get_current_user
 from controllers.user_controller import UserController
 from schemas.user_schema import (
     UserCreate,
@@ -37,8 +38,9 @@ def get_users(db: Session = Depends(get_db)):
 def get_user(
     user_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return UserController.get_user(db, user_id)
+    return UserController.get_user(db, user_id, current_user)
 
 
 @router.patch("/{user_id}", response_model=UserResponse)

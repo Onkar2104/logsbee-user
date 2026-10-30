@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from database import get_db
+from core.database import get_db
 from schemas.verification_schema import (
     OTPRequest,
     VerificationResponse,
@@ -10,7 +10,7 @@ from schemas.verification_schema import (
 from controllers.verification_controller import VerificationController
 
 router = APIRouter(
-    prefix="/api/v1/users",
+    prefix="/api/users",
     tags=["Verification"],
 )
 

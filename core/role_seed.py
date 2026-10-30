@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from database import SessionLocal
+from core.database import SessionLocal
 from models.user_role_model import UserRole
 
 
