@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.orm import Session
 
 from models.user_model import User
@@ -22,9 +22,38 @@ class UserRepository:
         )
 
     @staticmethod
+    def email_exists(
+        db: Session,
+        email: str,
+        exclude_user_id: uuid.UUID,
+    ) -> bool:
+        return db.scalar(
+            select(
+                exists().where(
+                    User.email == email,
+                    User.id != exclude_user_id,
+                )
+            )
+        )
+
+    @staticmethod
+    def role_exists(db: Session, role_id: uuid.UUID) -> bool:
+        return db.scalar(
+            select(
+                exists().where(
+                    UserRole.id == role_id,
+                    UserRole.is_deleted.is_(False),
+                )
+            )
+        )
+
+    @staticmethod
     def get_by_user_role(db: Session, name: str):
         return db.scalar(
-            select(UserRole).where(UserRole.name == name)
+            select(UserRole).where(
+                UserRole.name == name,
+                UserRole.is_deleted.is_(False),
+            )
         )
 
     @staticmethod
@@ -36,12 +65,6 @@ class UserRepository:
                 .order_by(User.created_at.desc())
             ).all()
         )
-
-    @staticmethod
-    def role_exists(db: Session, role_id: uuid.UUID) -> bool:
-        return db.scalar(
-            select(UserRole.id).where(UserRole.id == role_id)
-        ) is not None
 
     @staticmethod
     def create(db: Session, user: User):

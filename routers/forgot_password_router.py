@@ -11,7 +11,7 @@ from schemas.forgot_password_schema import (
 )
 
 router = APIRouter(
-    prefix="/api/v1/auth/forgot-password",
+    prefix="/api/auth/forgot-password",
     tags=["Forgot Password"],
 )
 

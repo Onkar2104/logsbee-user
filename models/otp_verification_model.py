@@ -63,11 +63,18 @@ class VerificationOTP(Base):
         nullable=True,
     )
 
+    purpose: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="email_verification",
+    )
+
     __table_args__ = (
         Index(
             "ix_verification_otp_lookup",
             "user_id",
             "channel",
             "created_at",
+            "purpose",
         ),
     )

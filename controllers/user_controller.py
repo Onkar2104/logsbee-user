@@ -47,11 +47,17 @@ class UserController:
         )
 
 
+    # @staticmethod
+    # def change_password(
+    #     db: Session,
+    #     user_id: uuid.UUID,
+    #     data: PasswordChange,
+    #     current_user,
+    # ):
+    #     return UserService.change_password(db, user_id, data, current_user)
+
     @staticmethod
-    def change_password(
-        db: Session,
-        user_id: uuid.UUID,
-        data: PasswordChange,
-        current_user,
-    ):
-        return UserService.change_password(db, user_id, data, current_user)
+    def change_password(db, request, current_user):
+        return UserService.change_password(
+            db, request, current_user
+        )

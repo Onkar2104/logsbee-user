@@ -9,8 +9,20 @@ from routers.verification_router import router as verification_router
 from routers.forgot_password_router import router as forgot_password_router
 from routers.auth_router import router as auth_router
 from core.role_seed import seed_roles
+from core.limiter import limiter
+
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 
 app = FastAPI(title="User Management API")
+
+app.state.limiter = limiter
+
+app.add_exception_handler(
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler,
+)
 
 Base.metadata.create_all(bind=engine)
 

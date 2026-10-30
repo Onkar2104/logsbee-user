@@ -14,7 +14,7 @@ from schemas.user_schema import (
 from schemas.user_schema import PasswordChange
 from typing import Optional
 
-router = APIRouter(prefix="/api/v1/users", tags=["Users"])
+router = APIRouter(prefix="/api/users", tags=["Users"])
 
 
 @router.post(
@@ -68,16 +68,26 @@ def delete_user(
     return {"message": "User soft-deleted successfully"}
 
 
-@router.patch(
-    "/{user_id}/password",
-    status_code=status.HTTP_200_OK,
-)
+# @router.patch(
+#     "/{user_id}/password",
+#     status_code=status.HTTP_200_OK,
+# )
+# def change_password(
+#     user_id: uuid.UUID,
+#     data: PasswordChange,
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user),
+# ):
+#     UserController.change_password(db, user_id, data, current_user)
+
+#     return {"message": "Password changed successfully"}
+
+@router.post("/change-password")
 def change_password(
-    user_id: uuid.UUID,
-    data: PasswordChange,
+    request: PasswordChange,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    UserController.change_password(db, user_id, data, current_user)
-
-    return {"message": "Password changed successfully"}
+    return UserController.change_password(
+        db, request, current_user
+    )
