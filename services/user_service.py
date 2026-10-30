@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from models.user_model import User
 from core.security import hash_password, verify_password
+from core.user_permissions import check_user_access, check_user_role
 from schemas.user_schema import UserCreate, UserUpdate, PasswordChange
 from repositories.user_repository import UserRepository
 from repositories.password_history_repository import PasswordHistoryRepository
@@ -53,27 +54,17 @@ class UserService:
 
 
     @staticmethod
-    def get_users(db: Session):
+    def get_users(db: Session, current_user):
+
+        check_user_role(current_user)
+        
         return UserRepository.get_all_active(db)
 
 
     @staticmethod
     def get_user(db: Session, user_id: uuid.UUID, current_user):
-        is_same_user = current_user.id == user_id
 
-        user_role = (
-            current_user.user_role.name.strip().lower()
-            if current_user.user_role
-            else ""
-        )
-
-        is_admin = user_role in ["admin", "super admin"]
-
-        if not is_same_user and not is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied.",
-            )
+        check_user_access(current_user, user_id)
 
         user = UserRepository.get_by_id(db, user_id)
 
@@ -91,8 +82,12 @@ class UserService:
         db: Session,
         user_id: uuid.UUID,
         data: UserUpdate,
+        current_user,
     ):
-        user = UserService.get_user(db, user_id)
+
+        check_user_access(current_user, user_id)
+        
+        user = UserService.get_user(db, user_id, current_user)
         changes = data.model_dump(exclude_unset=True)
 
         if "email" in changes and changes["email"] is not None:
@@ -121,14 +116,19 @@ class UserService:
         user.updated_at = datetime.now(timezone.utc)
         return UserRepository.update(db, user)
 
+
     @staticmethod
     def delete_user(
         db: Session,
         user_id: uuid.UUID,
         deleted_by: uuid.UUID | None,
         reason: str | None,
+        current_user,
     ):
-        user = UserService.get_user(db, user_id)
+
+        check_user_access(current_user, user_id)
+        
+        user = UserService.get_user(db, user_id, current_user)
 
         user.is_deleted = True
         user.deleted_at = datetime.now(timezone.utc)
@@ -190,14 +190,12 @@ class UserService:
 
         new_password = request.new_password.get_secret_value()
 
-        # Reject reuse of the current password.
         if verify_password(new_password, user.password_hash):
             raise HTTPException(
                 status_code=400,
                 detail="New password must differ from current password",
             )
 
-        # Reject reuse of any of the last five changed passwords.
         history = PasswordHistoryRepository.get_last_five(
             db, user.id
         )
@@ -212,7 +210,6 @@ class UserService:
         now = datetime.utcnow()
 
         try:
-            # Save the old hash before replacing it.
             PasswordHistoryRepository.add(
                 db, user.id, user.password_hash
             )

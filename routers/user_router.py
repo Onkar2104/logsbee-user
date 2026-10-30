@@ -30,8 +30,11 @@ def create_user(
 
 
 @router.get("/", response_model=list[UserResponse])
-def get_users(db: Session = Depends(get_db)):
-    return UserController.get_users(db)
+def get_users(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return UserController.get_users(db, current_user)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -48,8 +51,9 @@ def update_user(
     user_id: uuid.UUID,
     data: UserUpdate,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return UserController.update_user(db, user_id, data)
+    return UserController.update_user(db, user_id, data, current_user)
 
 
 @router.delete("/{user_id}")
@@ -58,8 +62,9 @@ def delete_user(
     deleted_by: Optional[uuid.UUID] = Query(default=None),
     reason: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    UserController.delete_user(db, user_id, deleted_by, reason)
+    UserController.delete_user(db, user_id, deleted_by, reason, current_user)
     return {"message": "User soft-deleted successfully"}
 
 
@@ -71,7 +76,8 @@ def change_password(
     user_id: uuid.UUID,
     data: PasswordChange,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    UserController.change_password(db, user_id, data)
+    UserController.change_password(db, user_id, data, current_user)
 
     return {"message": "Password changed successfully"}

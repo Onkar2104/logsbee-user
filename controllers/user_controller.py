@@ -15,8 +15,8 @@ class UserController:
 
 
     @staticmethod
-    def get_users(db: Session):
-        return UserService.get_users(db)
+    def get_users(db: Session, current_user):
+        return UserService.get_users(db, current_user)
 
 
     @staticmethod
@@ -29,8 +29,9 @@ class UserController:
         db: Session,
         user_id: uuid.UUID,
         data: UserUpdate,
+        current_user,
     ):
-        return UserService.update_user(db, user_id, data)
+        return UserService.update_user(db, user_id, data, current_user)
 
 
     @staticmethod
@@ -39,9 +40,10 @@ class UserController:
         user_id: uuid.UUID,
         deleted_by: uuid.UUID | None,
         reason: str | None,
+        current_user,
     ):
         return UserService.delete_user(
-            db, user_id, deleted_by, reason
+            db, user_id, deleted_by, reason, current_user
         )
 
 
@@ -50,5 +52,6 @@ class UserController:
         db: Session,
         user_id: uuid.UUID,
         data: PasswordChange,
+        current_user,
     ):
-        return UserService.change_password(db, user_id, data)
+        return UserService.change_password(db, user_id, data, current_user)
