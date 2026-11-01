@@ -4,7 +4,12 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from core.user_permissions import check_super_admin, check_user_role
+from core.user_permissions import (
+    check_super_admin,
+    check_user_role,
+    is_super_admin,
+    is_account_admin,
+)
 from models.account_model import Account
 from models.account_product_model import AccountProduct
 from models.product_model import Product
@@ -15,22 +20,58 @@ from models.user_product_model import UserProduct
 class ProductAccessService:
     @staticmethod
     def list_account_products(db: Session, account_id: UUID, current_user):
-        check_super_admin(current_user)
-        rows = db.query(AccountProduct, Product).join(
-            Product, Product.id == AccountProduct.product_id
-        ).filter(AccountProduct.account_id == account_id).all()
+        # Account Admins may only view the products purchased/enabled for
+        # their own account. Never trust the account_id supplied by the client.
+        if is_account_admin(current_user):
+            if current_user.account_id != account_id:
+                raise HTTPException(status_code=404, detail="Account not found.")
 
-        # SQLAlchemy returns (AccountProduct, Product) tuples for this query.
-        # Convert them to plain dictionaries so FastAPI can serialize the response.
+            now = datetime.utcnow()
+            rows = db.query(AccountProduct, Product).join(
+                Product, Product.id == AccountProduct.product_id
+            ).filter(
+                AccountProduct.account_id == current_user.account_id,
+                AccountProduct.is_enabled.is_(True),
+                (AccountProduct.expires_at.is_(None) | (AccountProduct.expires_at > now)),
+                Product.is_active.is_(True),
+            ).order_by(Product.name).all()
+
+            return [
+                {
+                    "product_id": account_product.product_id,
+                    "code": product.code,
+                    "name": product.name,
+                    "is_enabled": account_product.is_enabled,
+                    "expires_at": account_product.expires_at,
+                }
+                for account_product, product in rows
+            ]
+
+        # Platform Super Admin sees the complete product catalogue for the
+        # requested account, including products not currently enabled there.
+        check_super_admin(current_user)
+        account = db.query(Account).filter(
+            Account.account_id == account_id,
+            Account.is_deleted.is_(False),
+        ).first()
+        if account is None:
+            raise HTTPException(status_code=404, detail="Account not found.")
+
+        rows = db.query(Product, AccountProduct).outerjoin(
+            AccountProduct,
+            (AccountProduct.product_id == Product.id)
+            & (AccountProduct.account_id == account_id),
+        ).order_by(Product.name).all()
+
         return [
             {
-                "product_id": account_product.product_id,
+                "product_id": product.id,
                 "code": product.code,
                 "name": product.name,
-                "is_enabled": account_product.is_enabled,
-                "expires_at": account_product.expires_at,
+                "is_enabled": bool(account_product and account_product.is_enabled),
+                "expires_at": account_product.expires_at if account_product else None,
             }
-            for account_product, product in rows
+            for product, account_product in rows
         ]
 
     @staticmethod
