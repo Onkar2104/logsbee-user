@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from core.user_permissions import check_super_admin, is_super_admin, is_account_admin
 from models.product_model import Product
+from models.account_product_model import AccountProduct
+from models.user_product_model import UserProduct
 from schemas.product_schema import ProductCreate, ProductUpdate
 
 
