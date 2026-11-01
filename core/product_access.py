@@ -10,7 +10,10 @@ from models.user_product_model import UserProduct
 def require_product_access(db, current_user, product_code: str):
     """Require the product to be active globally and enabled for the user's account."""
     if current_user.account_id is None:
-        return True  # Platform Super Admin is not an account tenant.
+        from core.user_permissions import is_super_admin
+        if is_super_admin(current_user):
+            return True  # Platform Super Admin is not an account tenant.
+        raise HTTPException(status_code=403, detail="Account membership is required.")
     product = db.query(Product).filter(Product.code == product_code, Product.is_active.is_(True)).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found or inactive.")
@@ -19,7 +22,7 @@ def require_product_access(db, current_user, product_code: str):
         AccountProduct.product_id == product.id,
         AccountProduct.is_enabled.is_(True),
     ).first()
-    if assignment is None or (assignment.expires_at and assignment.expires_at <= datetime.now(timezone.utc)):
+    if assignment is None or (assignment.expires_at and assignment.expires_at <= datetime.now(timezone.utc).replace(tzinfo=None)):
         raise HTTPException(status_code=403, detail="This product is not enabled for your account.")
     return True
 
