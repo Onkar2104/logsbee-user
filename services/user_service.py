@@ -12,6 +12,7 @@ from core.user_permissions import (
     check_user_role,
     get_user_role,
     is_super_admin,
+    check_permission,
 )
 from models.user_model import User
 from repositories.user_repository import UserRepository
@@ -25,9 +26,9 @@ class UserService:
     def create_user(db: Session, data: UserCreate, current_user):
         # Platform Super Admin creates accounts and their first Admin via
         # AccountService. This endpoint is for account Admins only.
-        check_user_role(current_user)
-        if is_super_admin(current_user) or current_user.account_id is None:
-            raise HTTPException(status_code=403, detail="Account Admin access required.")
+        check_permission(current_user, "users.create")
+        if current_user.account_id is None:
+            raise HTTPException(status_code=403, detail="Account-scoped user creation is required.")
 
         email = data.email.strip().lower()
         if UserRepository.get_by_email(db, email):
@@ -69,9 +70,9 @@ class UserService:
 
     @staticmethod
     def get_users(db: Session, current_user):
-        check_user_role(current_user)
         if is_super_admin(current_user):
             return UserRepository.get_all_active(db)
+        check_permission(current_user, "users.view")
         return UserRepository.get_all_active(db, account_id=current_user.account_id)
 
     @staticmethod
@@ -89,7 +90,7 @@ class UserService:
 
         # A normal user may update their own profile, but cannot change roles.
         if "user_role_id" in changes:
-            check_user_role(current_user)
+            check_permission(current_user, "users.update")
             if not is_super_admin(current_user) and (
                 user.account_id != current_user.account_id
             ):
@@ -139,10 +140,9 @@ class UserService:
         user = UserService.get_user(db, user_id, current_user)
         if user.id == current_user.id:
             raise HTTPException(status_code=400, detail="You cannot delete your own account.")
-        if not (is_super_admin(current_user) or (
-            get_user_role(current_user) == "admin"
-            and current_user.account_id == user.account_id
-        )):
+        if not is_super_admin(current_user) and current_user.account_id == user.account_id:
+            check_permission(current_user, "users.delete")
+        elif not is_super_admin(current_user):
             raise HTTPException(status_code=403, detail="Permission denied.")
         user.is_deleted = True
         user.deleted_at = datetime.now(timezone.utc)
