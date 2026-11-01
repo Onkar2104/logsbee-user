@@ -23,7 +23,7 @@ def get_current_user(
 
     try:
         user_id = UUID(payload["sub"])
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, KeyError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token subject",
@@ -36,5 +36,15 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
+
+    # Account users cannot continue using tokens after their organization
+    # has been suspended or soft-deleted. Platform Super Admin has no account.
+    if user.account_id is not None:
+        account = user.account
+        if account is None or not account.is_active or account.is_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This account is inactive.",
+            )
 
     return user

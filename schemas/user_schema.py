@@ -1,20 +1,22 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
-from typing import Optional
 
 
 class UserCreate(BaseModel):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     email: str = Field(min_length=3, max_length=255)
-    password: SecretStr = Field(min_length=8, max_length=128)       #SecretStr helps prevent accidental password exposure in common Pydantic representations. The password is still explicitly extracted and hashed before storage.
+    password: SecretStr = Field(min_length=8, max_length=128)
     contact: Optional[str] = Field(default=None, max_length=20)
     country: Optional[str] = None
     state: Optional[str] = None
     zip_code: Optional[str] = Field(default=None, max_length=20)
     address: Optional[str] = None
+    # Optional custom role; omitted means the account's default system User role.
+    user_role_id: Optional[uuid.UUID] = None
 
 
 class UserUpdate(BaseModel):
@@ -33,6 +35,7 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    account_id: Optional[uuid.UUID]
     first_name: str
     last_name: str
     email: str
@@ -54,9 +57,7 @@ class UserResponse(BaseModel):
     deleted_by: Optional[uuid.UUID]
     deletion_reason: Optional[str]
 
+
 class PasswordChange(BaseModel):
     current_password: SecretStr
-    new_password: SecretStr = Field(
-        min_length=8,
-        max_length=128,
-    )
+    new_password: SecretStr = Field(min_length=8, max_length=128)

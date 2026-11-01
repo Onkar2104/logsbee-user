@@ -1,32 +1,24 @@
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from core.database import get_db
 from core.auth_dependencies import get_current_user
+from core.database import get_db
 from controllers.user_controller import UserController
-from schemas.user_schema import (
-    UserCreate,
-    UserUpdate,
-    UserResponse,
-)
-from schemas.user_schema import PasswordChange
-from typing import Optional
+from schemas.user_schema import UserCreate, UserUpdate, UserResponse, PasswordChange
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
 
-@router.post(
-    "/",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     data: UserCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return UserController.create_user(db, data)
+    return UserController.create_user(db, data, current_user)
 
 
 @router.get("/", response_model=list[UserResponse])
@@ -59,28 +51,13 @@ def update_user(
 @router.delete("/{user_id}")
 def delete_user(
     user_id: uuid.UUID,
-    deleted_by: Optional[uuid.UUID] = Query(default=None),
     reason: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    UserController.delete_user(db, user_id, deleted_by, reason, current_user)
+    UserController.delete_user(db, user_id, None, reason, current_user)
     return {"message": "User soft-deleted successfully"}
 
-
-# @router.patch(
-#     "/{user_id}/password",
-#     status_code=status.HTTP_200_OK,
-# )
-# def change_password(
-#     user_id: uuid.UUID,
-#     data: PasswordChange,
-#     db: Session = Depends(get_db),
-#     current_user=Depends(get_current_user),
-# ):
-#     UserController.change_password(db, user_id, data, current_user)
-
-#     return {"message": "Password changed successfully"}
 
 @router.post("/change-password")
 def change_password(
@@ -88,6 +65,4 @@ def change_password(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    return UserController.change_password(
-        db, request, current_user
-    )
+    return UserController.change_password(db, request, current_user)
