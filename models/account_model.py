@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, String, Text, Uuid, ForeignKey
+from sqlalchemy import Boolean, DateTime, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.base import Base
@@ -20,7 +20,6 @@ class Account(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
-
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     contact: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
@@ -32,10 +31,10 @@ class Account(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
+    # Audit actor id; deliberately no FK to users to avoid a circular
+    # accounts <-> users table dependency during initial schema creation.
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        Uuid(as_uuid=True, native_uuid=False),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
+        Uuid(as_uuid=True, native_uuid=False), nullable=True
     )
     updated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), onupdate=utc_now, nullable=True
