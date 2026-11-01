@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import String, cast, func, or_\nfrom sqlalchemy.orm import Session
 
 from core.user_permissions import (
     check_super_admin,
@@ -94,13 +94,21 @@ class ProductAccessService:
         # A normal user can view only their own assignments. Account Admins
         # can view assignments for users in their own account. Platform
         # Super Admins can inspect users across accounts.
+        # UUID columns are stored as CHAR(32) in the MySQL schema.
+        # Match both SQLAlchemy's UUID comparison and the normalized stored
+        # representation to tolerate UUID values supplied with/without hyphens.
+        normalized_user_id = user_id.hex
         user = db.query(User).filter(
-            User.id == user_id,
-            User.is_deleted.is_(False),
+            or_(
+                User.id == user_id,
+                func.lower(func.replace(cast(User.id, String(36)), "-", "")) == normalized_user_id,
+            )
         ).first()
 
         if user is None:
-            raise HTTPException(status_code=404, detail="User not found.")
+            raise HTTPException(status_code=404, detail="User not found. Verify that the supplied UUID exists in the users table.")
+        if user.is_deleted:
+            raise HTTPException(status_code=404, detail="User is deleted.")
 
         if is_account_admin(current_user):
             if user.account_id != current_user.account_id:
@@ -133,13 +141,17 @@ class ProductAccessService:
         if not is_account_admin(current_user):
             raise HTTPException(status_code=403, detail="Account Admin access required.")
 
+        normalized_user_id = user_id.hex
         user = db.query(User).filter(
-            User.id == user_id,
+            or_(
+                User.id == user_id,
+                func.lower(func.replace(cast(User.id, String(36)), "-", "")) == normalized_user_id,
+            ),
             User.account_id == current_user.account_id,
             User.is_deleted.is_(False),
         ).first()
         if not user:
-            raise HTTPException(status_code=404, detail="User not found in your account.")
+            raise HTTPException(status_code=404, detail="User not found in your account. Verify the user UUID and account ownership.")
         ids = set(product_ids)
         enabled_account_products = db.query(AccountProduct.product_id).join(Product, Product.id == AccountProduct.product_id).filter(
             AccountProduct.account_id == current_user.account_id,
