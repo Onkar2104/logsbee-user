@@ -63,3 +63,35 @@ Omit `user_role_id` to assign the default system `user` role. A supplied role mu
 ## Important deployment note
 
 `create_all()` does not alter existing tables. Do not deploy the updated app against an old database until the migration has completed successfully. Run the migration on a backup/staging copy first.
+
+
+## Phase 2: Role-Based Access Control (RBAC)
+
+After Phase 1 is applied, back up the database and run:
+
+```sql
+SOURCE migrations/002_rbac_mysql.sql;
+```
+
+The application seeds the permission catalogue at startup. The initial permission codes are:
+
+- `users.view`
+- `users.create`
+- `users.update`
+- `users.delete`
+- `roles.view`
+- `roles.manage`
+
+For a new database, `Base.metadata.create_all()` creates the RBAC tables because the models are imported in `main.py`. The SQL migration is provided for explicit/versioned deployment and should be run only once.
+
+### RBAC API
+
+All endpoints require a valid access token:
+
+- `GET /api/roles/` — list account custom roles (requires `roles.view`)
+- `GET /api/roles/permissions` — list the permission catalogue (requires `roles.view`)
+- `POST /api/roles/` — create a custom role and assign permissions (requires `roles.manage`)
+- `PATCH /api/roles/{role_id}` — update a custom role (requires `roles.manage`)
+- `DELETE /api/roles/{role_id}` — soft-delete an unassigned custom role (requires `roles.manage`)
+
+Account Admins and Platform Super Admins retain their administrative bypass. Custom roles are account-scoped. A role cannot be read or modified across account boundaries.
