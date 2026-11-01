@@ -10,7 +10,6 @@ CREATE TABLE products (
     created_at DATETIME NOT NULL,
     updated_at DATETIME NULL,
     UNIQUE KEY uq_products_code (code),
-    KEY ix_products_code (code)
 ) ENGINE=InnoDB;
 
 CREATE TABLE account_products (
