@@ -19,12 +19,8 @@ class UserRole(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True, native_uuid=False),
-        primary_key=True,
-        default=uuid.uuid4,
+        Uuid(as_uuid=True, native_uuid=False), primary_key=True, default=uuid.uuid4
     )
-
-    # System roles have account_id=None. Custom roles belong to one account.
     account_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid(as_uuid=True, native_uuid=False),
         ForeignKey("accounts.account_id", ondelete="CASCADE"),
@@ -32,20 +28,14 @@ class UserRole(Base):
         index=True,
     )
     account = relationship("Account", back_populates="roles", lazy="select")
-
-    is_system_role: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
-
+    is_system_role: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     users = relationship("User", back_populates="user_role")
-
+    permissions = relationship(
+        "Permission", secondary="role_permissions", back_populates="roles",
+        lazy="selectin"
+    )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, nullable=False
-    )
-    updated_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), onupdate=utc_now, nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=utc_now, nullable=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
