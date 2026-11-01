@@ -8,12 +8,16 @@ from models.user_model import User
 from models.user_role_model import UserRole
 from models.permission_model import Permission
 from models.role_permission_model import RolePermission
+from models.product_model import Product
+from models.account_product_model import AccountProduct
+from models.user_product_model import UserProduct
 from models.otp_verification_model import VerificationOTP
 from models.password_reset_otp_model import PasswordResetOTP
 
 from routers.user_router import router as user_router
 from routers.account_router import router as account_router
 from routers.role_router import router as role_router
+from routers.product_router import router as product_router
 from routers.verification_router import router as verification_router
 from routers.forgot_password_router import router as forgot_password_router
 from routers.auth_router import router as auth_router
@@ -37,6 +41,7 @@ seed_permissions()
 
 app.include_router(account_router)
 app.include_router(role_router)
+app.include_router(product_router)
 app.include_router(user_router)
 app.include_router(verification_router)
 app.include_router(forgot_password_router)
