@@ -53,8 +53,13 @@ class ProductAccessService:
         check_user_role(current_user)
         if current_user.account_id is None:
             raise HTTPException(status_code=400, detail="Use account-scoped user management.")
-        user = db.query(User).filter(User.id == user_id, User.account_id == current_user.account_id, User.is_deleted.is_(False)).first()
-        if not user:
+        # Fetch by user UUID first, then enforce tenant ownership separately.
+        # This keeps the lookup behavior clear while preserving cross-account isolation.
+        user = db.query(User).filter(
+            User.id == user_id,
+            User.is_deleted.is_(False),
+        ).first()
+        if user is None or user.account_id != current_user.account_id:
             raise HTTPException(status_code=404, detail="User not found in your account.")
         rows = db.query(UserProduct, Product).join(
             Product, Product.id == UserProduct.product_id
