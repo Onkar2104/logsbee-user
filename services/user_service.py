@@ -95,6 +95,8 @@ class UserService:
             ):
                 raise HTTPException(status_code=403, detail="Cross-account role assignment is forbidden.")
             role_id = changes["user_role_id"]
+            if role_id is None:
+                raise HTTPException(status_code=400, detail="A user role is required.")
             if role_id is not None:
                 role = UserRepository.get_role_by_id(db, role_id)
                 if role is None:
