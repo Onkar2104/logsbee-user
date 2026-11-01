@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from controllers.product_controller import ProductController
 from core.auth_dependencies import get_current_user
 from core.database import get_db
-from schemas.product_schema import ProductCreate, ProductUpdate, ProductResponse, ProductAssignment
+from schemas.product_schema import (\n    ProductCreate, ProductUpdate, ProductResponse, ProductAssignment,\n    AccountProductResponse, UserProductResponse,\n)
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 
@@ -26,7 +26,7 @@ def update_product(product_id: uuid.UUID, data: ProductUpdate, db: Session = Dep
     return ProductController.update_product(db, product_id, data, current_user)
 
 
-@router.get("/accounts/{account_id}")
+@router.get("/accounts/{account_id}", response_model=list[AccountProductResponse])
 def list_account_products(account_id: uuid.UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     return ProductController.list_account_products(db, account_id, current_user)
 
@@ -36,7 +36,7 @@ def set_account_products(account_id: uuid.UUID, data: ProductAssignment, db: Ses
     return ProductController.set_account_products(db, account_id, data.product_ids, current_user)
 
 
-@router.get("/users/{user_id}")
+@router.get("/users/{user_id}", response_model=list[UserProductResponse])
 def list_user_products(user_id: uuid.UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     return ProductController.list_user_products(db, user_id, current_user)
 
