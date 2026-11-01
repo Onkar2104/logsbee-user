@@ -19,6 +19,16 @@ from services.verification_service import VerificationService
 class LoginService:
 
     @staticmethod
+    def _check_account_active(user):
+        if user.account_id is not None:
+            account = user.account
+            if account is None or not account.is_active or account.is_deleted:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This account is inactive.",
+                )
+
+    @staticmethod
     def _check_password_expiry(user):
 
         if user.password_expires_at is not None:
@@ -78,6 +88,7 @@ class LoginService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        LoginService._check_account_active(user)
         LoginService._check_password_expiry(user)
 
         # Check whether 2FA is enabled.
@@ -134,6 +145,7 @@ class LoginService:
                 detail="Login verification is no longer valid",
             )
 
+        LoginService._check_account_active(user)
         LoginService._check_password_expiry(user)
 
         return LoginService._generate_tokens(user)
@@ -163,6 +175,7 @@ class LoginService:
                 detail="Invalid refresh token",
             )
 
+        LoginService._check_account_active(user)
         LoginService._check_password_expiry(user)
 
         return {
