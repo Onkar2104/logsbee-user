@@ -91,22 +91,31 @@ class ProductAccessService:
 
     @staticmethod
     def list_user_products(db: Session, user_id: UUID, current_user):
-        check_user_role(current_user)
-        if current_user.account_id is None:
-            raise HTTPException(status_code=400, detail="Use account-scoped user management.")
-        # Fetch by user UUID first, then enforce tenant ownership separately.
-        # This keeps the lookup behavior clear while preserving cross-account isolation.
+        # A normal user can view only their own assignments. Account Admins
+        # can view assignments for users in their own account. Platform
+        # Super Admins can inspect users across accounts.
         user = db.query(User).filter(
             User.id == user_id,
             User.is_deleted.is_(False),
         ).first()
-        if user is None or user.account_id != current_user.account_id:
-            raise HTTPException(status_code=404, detail="User not found in your account.")
+
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        if is_account_admin(current_user):
+            if user.account_id != current_user.account_id:
+                raise HTTPException(status_code=404, detail="User not found in your account.")
+        elif is_super_admin(current_user):
+            pass
+        elif current_user.id != user.id:
+            raise HTTPException(status_code=403, detail="You can only view your own assigned products.")
+
         rows = db.query(UserProduct, Product).join(
             Product, Product.id == UserProduct.product_id
-        ).filter(UserProduct.user_id == user_id).all()
+        ).filter(UserProduct.user_id == user_id).order_by(Product.name).all()
 
-        # Convert (UserProduct, Product) tuples into JSON-compatible dictionaries.
+        # Return every assignment, including disabled assignments, so the
+        # caller can see the actual assignment state.
         return [
             {
                 "product_id": user_product.product_id,
@@ -119,10 +128,16 @@ class ProductAccessService:
 
     @staticmethod
     def set_user_products(db: Session, user_id: UUID, product_ids: list[UUID], current_user):
-        check_user_role(current_user)
-        if current_user.account_id is None:
-            raise HTTPException(status_code=400, detail="Use account-scoped user management.")
-        user = db.query(User).filter(User.id == user_id, User.account_id == current_user.account_id, User.is_deleted.is_(False)).first()
+        # Only an Account Admin may grant/revoke individual user products.
+        # Super Admin and ordinary users are intentionally not allowed here.
+        if not is_account_admin(current_user):
+            raise HTTPException(status_code=403, detail="Account Admin access required.")
+
+        user = db.query(User).filter(
+            User.id == user_id,
+            User.account_id == current_user.account_id,
+            User.is_deleted.is_(False),
+        ).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found in your account.")
         ids = set(product_ids)
