@@ -6,15 +6,19 @@ from models.base import Base
 from models.account_model import Account
 from models.user_model import User
 from models.user_role_model import UserRole
+from models.permission_model import Permission
+from models.role_permission_model import RolePermission
 from models.otp_verification_model import VerificationOTP
 from models.password_reset_otp_model import PasswordResetOTP
 
 from routers.user_router import router as user_router
 from routers.account_router import router as account_router
+from routers.role_router import router as role_router
 from routers.verification_router import router as verification_router
 from routers.forgot_password_router import router as forgot_password_router
 from routers.auth_router import router as auth_router
 from core.role_seed import seed_roles
+from core.permission_catalogue import seed_permissions
 from core.limiter import limiter
 
 from slowapi import _rate_limit_exceeded_handler
@@ -29,8 +33,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # run the SQL migration in migrations/001_account_multi_tenancy_mysql.sql.
 Base.metadata.create_all(bind=engine)
 seed_roles()
+seed_permissions()
 
 app.include_router(account_router)
+app.include_router(role_router)
 app.include_router(user_router)
 app.include_router(verification_router)
 app.include_router(forgot_password_router)
