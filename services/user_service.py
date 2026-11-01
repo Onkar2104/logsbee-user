@@ -86,6 +86,8 @@ class UserService:
     @staticmethod
     def update_user(db: Session, user_id: uuid.UUID, data: UserUpdate, current_user):
         user = UserService.get_user(db, user_id, current_user)
+        if user.id != current_user.id:
+            check_permission(current_user, "users.update")
         changes = data.model_dump(exclude_unset=True)
 
         # A normal user may update their own profile, but cannot change roles.
