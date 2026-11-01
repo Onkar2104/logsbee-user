@@ -11,11 +11,11 @@ DEFAULT_ROLES = [
     },
     {
         "name": "admin",
-        "description": "Administrator responsible for managing users and resources.",
+        "description": "Administrator responsible for managing one account.",
     },
     {
         "name": "user",
-        "description": "Default role assigned to newly registered users.",
+        "description": "Default role assigned to account users.",
     },
 ]
 
@@ -25,11 +25,12 @@ def seed_roles() -> None:
         for role_data in DEFAULT_ROLES:
             existing_role = db.scalar(
                 select(UserRole).where(
-                    UserRole.name == role_data["name"]
+                    UserRole.name == role_data["name"],
+                    UserRole.account_id.is_(None),
                 )
             )
-
             if existing_role is None:
-                db.add(UserRole(**role_data))
-
+                db.add(UserRole(**role_data, is_system_role=True))
+            elif not existing_role.is_system_role:
+                existing_role.is_system_role = True
         db.commit()
