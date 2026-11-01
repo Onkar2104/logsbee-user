@@ -16,9 +16,22 @@ class ProductAccessService:
     @staticmethod
     def list_account_products(db: Session, account_id: UUID, current_user):
         check_super_admin(current_user)
-        return db.query(AccountProduct, Product).join(Product, Product.id == AccountProduct.product_id).filter(
-            AccountProduct.account_id == account_id
-        ).all()
+        rows = db.query(AccountProduct, Product).join(
+            Product, Product.id == AccountProduct.product_id
+        ).filter(AccountProduct.account_id == account_id).all()
+
+        # SQLAlchemy returns (AccountProduct, Product) tuples for this query.
+        # Convert them to plain dictionaries so FastAPI can serialize the response.
+        return [
+            {
+                "product_id": account_product.product_id,
+                "code": product.code,
+                "name": product.name,
+                "is_enabled": account_product.is_enabled,
+                "expires_at": account_product.expires_at,
+            }
+            for account_product, product in rows
+        ]
 
     @staticmethod
     def set_account_products(db: Session, account_id: UUID, product_ids: list[UUID], current_user):
@@ -43,7 +56,20 @@ class ProductAccessService:
         user = db.query(User).filter(User.id == user_id, User.account_id == current_user.account_id, User.is_deleted.is_(False)).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found in your account.")
-        return db.query(UserProduct, Product).join(Product, Product.id == UserProduct.product_id).filter(UserProduct.user_id == user_id).all()
+        rows = db.query(UserProduct, Product).join(
+            Product, Product.id == UserProduct.product_id
+        ).filter(UserProduct.user_id == user_id).all()
+
+        # Convert (UserProduct, Product) tuples into JSON-compatible dictionaries.
+        return [
+            {
+                "product_id": user_product.product_id,
+                "code": product.code,
+                "name": product.name,
+                "is_enabled": user_product.is_enabled,
+            }
+            for user_product, product in rows
+        ]
 
     @staticmethod
     def set_user_products(db: Session, user_id: UUID, product_ids: list[UUID], current_user):
