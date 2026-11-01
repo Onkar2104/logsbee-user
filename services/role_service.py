@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from core.user_permissions import check_super_admin, is_super_admin, is_account_admin
+from core.user_permissions import check_permission, is_super_admin
 from models.user_role_model import UserRole
 from repositories.permission_repository import PermissionRepository
 from repositories.role_repository import RoleRepository
@@ -14,9 +14,10 @@ from schemas.role_schema import RoleCreate, RoleUpdate
 
 class RoleService:
     @staticmethod
-    def _require_account_admin(current_user):
-        if not is_account_admin(current_user):
-            raise HTTPException(status_code=403, detail="Account Admin access required.")
+    def _require_account_permission(current_user, permission_code: str):
+        if current_user.account_id is None:
+            raise HTTPException(status_code=403, detail="Account-scoped access required.")
+        check_permission(current_user, permission_code)
 
     @staticmethod
     def list_roles(db: Session, current_user):
@@ -26,18 +27,18 @@ class RoleService:
                 UserRole.is_system_role.is_(True),
                 UserRole.is_deleted.is_(False),
             ).all())
-        RoleService._require_account_admin(current_user)
+        RoleService._require_account_permission(current_user, "roles.view")
         return RoleRepository.get_account_roles(db, current_user.account_id)
 
     @staticmethod
     def list_permissions(db: Session, current_user):
-        if not (is_super_admin(current_user) or is_account_admin(current_user)):
-            raise HTTPException(status_code=403, detail="Permission denied.")
+        if not is_super_admin(current_user):
+            RoleService._require_account_permission(current_user, "roles.view")
         return PermissionRepository.get_all(db)
 
     @staticmethod
     def create_role(db: Session, data: RoleCreate, current_user):
-        RoleService._require_account_admin(current_user)
+        RoleService._require_account_permission(current_user, "roles.manage")
         name = data.name.strip()
         if RoleRepository.get_by_name(db, current_user.account_id, name):
             raise HTTPException(status_code=409, detail="A role with this name already exists.")
@@ -67,7 +68,7 @@ class RoleService:
 
     @staticmethod
     def update_role(db: Session, role_id: uuid.UUID, data: RoleUpdate, current_user):
-        RoleService._require_account_admin(current_user)
+        RoleService._require_account_permission(current_user, "roles.manage")
         role = RoleRepository.get_by_id(db, role_id)
         if not role or role.account_id != current_user.account_id or role.is_system_role:
             raise HTTPException(status_code=404, detail="Custom role not found.")
@@ -101,7 +102,7 @@ class RoleService:
 
     @staticmethod
     def delete_role(db: Session, role_id: uuid.UUID, current_user):
-        RoleService._require_account_admin(current_user)
+        RoleService._require_account_permission(current_user, "roles.manage")
         role = RoleRepository.get_by_id(db, role_id)
         if not role or role.account_id != current_user.account_id or role.is_system_role:
             raise HTTPException(status_code=404, detail="Custom role not found.")
