@@ -29,45 +29,6 @@ def get_users(
     return UserController.get_users(db, current_user)
 
 
-@router.get("/{user_id}", response_model=UserResponse)
-def get_user(
-    user_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return UserController.get_user(db, user_id, current_user)
-
-
-@router.patch("/{user_id}", response_model=UserResponse)
-def update_user(
-    user_id: uuid.UUID,
-    data: UserUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return UserController.update_user(db, user_id, data, current_user)
-
-
-@router.delete("/{user_id}")
-def delete_user(
-    user_id: uuid.UUID,
-    reason: Optional[str] = Query(default=None),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    UserController.delete_user(db, user_id, None, reason, current_user)
-    return {"message": "User soft-deleted successfully"}
-
-
-@router.post("/change-password")
-def change_password(
-    request: PasswordChange,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return UserController.change_password(db, request, current_user)
-
-
 @router.get("/me")
 def get_current_user_profile(
     db: Session = Depends(get_db),
@@ -111,3 +72,43 @@ def get_current_user_profile(
             for product in products
         ],
     }
+
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return UserController.get_user(db, user_id, current_user)
+
+
+@router.patch("/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: uuid.UUID,
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return UserController.update_user(db, user_id, data, current_user)
+
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: uuid.UUID,
+    reason: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    UserController.delete_user(db, user_id, None, reason, current_user)
+    return {"message": "User soft-deleted successfully"}
+
+
+@router.post("/change-password")
+def change_password(
+    request: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return UserController.change_password(db, request, current_user)
