@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
 
     # Comma-separated browser origins allowed to call this API.
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = ""
 
 
 settings = Settings()
