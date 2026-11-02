@@ -29,6 +29,79 @@ def get_users(
     return UserController.get_users(db, current_user)
 
 
+@router.get("/me")
+def get_current_user_profile(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Return the authenticated user's Logsbee identity and product entitlements."""
+    from services.product_service import ProductService
+
+    role = current_user.user_role
+    account = current_user.account
+    products = ProductService.list_products(db, current_user)
+
+    return {
+        "id": str(current_user.id),
+        "account_id": str(current_user.account_id) if current_user.account_id else None,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
+        "email": current_user.email,
+        "contact": current_user.contact,
+        "is_email_verified": current_user.is_email_verified,
+        "is_contact_verified": current_user.is_contact_verified,
+        "is_two_factor_authenticated": current_user.is_two_factor_authenticated,
+        "role": {
+            "id": str(role.id),
+            "name": role.name,
+            "is_system_role": role.is_system_role,
+        } if role else None,
+        "permission_codes": sorted(permission.code for permission in role.permissions) if role else [],
+        "account": {
+            "id": str(account.account_id),
+            "name": account.name,
+            "is_active": account.is_active,
+            "is_deleted": account.is_deleted,
+        } if account else None,
+        "products": [
+            {
+                "id": str(product.id),
+                "code": product.code,
+                "name": product.name,
+            }
+            for product in products
+        ],
+    }
+
+
+
+@router.get("/membership/{user_id}")
+def verify_same_account_membership(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Confirm that a target user is active and belongs to the caller's account."""
+    from fastapi import HTTPException
+    from repositories.user_repository import UserRepository
+
+    if current_user.account_id is None:
+        raise HTTPException(status_code=403, detail="Account membership is required.")
+
+    target_user = UserRepository.get_by_id(db, user_id)
+    if (
+        target_user is None
+        or target_user.is_deleted
+        or target_user.account_id != current_user.account_id
+    ):
+        raise HTTPException(status_code=404, detail="User not found in your account.")
+
+    return {
+        "id": str(target_user.id),
+        "account_id": str(target_user.account_id),
+    }
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: uuid.UUID,
