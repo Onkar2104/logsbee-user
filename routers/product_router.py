@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 from controllers.product_controller import ProductController
 from core.auth_dependencies import get_current_user
 from core.database import get_db
-from schemas.product_schema import (\n    ProductCreate, ProductUpdate, ProductResponse, ProductAssignment,\n    AccountProductResponse, UserProductResponse,\n)
+from schemas.product_schema import (
+    ProductCreate,
+    ProductUpdate,
+    ProductResponse,
+    ProductAssignment,
+    AccountProductResponse,
+    UserProductResponse,
+)
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 
