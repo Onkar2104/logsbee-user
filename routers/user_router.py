@@ -75,6 +75,33 @@ def get_current_user_profile(
 
 
 
+@router.get("/membership/{user_id}")
+def verify_same_account_membership(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Confirm that a target user is active and belongs to the caller's account."""
+    from fastapi import HTTPException
+    from repositories.user_repository import UserRepository
+
+    if current_user.account_id is None:
+        raise HTTPException(status_code=403, detail="Account membership is required.")
+
+    target_user = UserRepository.get_by_id(db, user_id)
+    if (
+        target_user is None
+        or target_user.is_deleted
+        or target_user.account_id != current_user.account_id
+    ):
+        raise HTTPException(status_code=404, detail="User not found in your account.")
+
+    return {
+        "id": str(target_user.id),
+        "account_id": str(target_user.account_id),
+    }
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: uuid.UUID,
