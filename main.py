@@ -1,4 +1,7 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from core.config import settings
 
 from core.database import engine
 from models.base import Base
@@ -30,6 +33,19 @@ from slowapi.errors import RateLimitExceeded
 
 
 app = FastAPI(title="User Management API")
+
+# Browser origins are configured through CORS_ORIGINS in the environment.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        origin.strip()
+        for origin in settings.cors_origins.split(",")
+        if origin.strip()
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
