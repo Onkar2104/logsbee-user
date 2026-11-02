@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import String, cast, func, or_\nfrom sqlalchemy.orm import Session
+from sqlalchemy import String, cast, func
+from sqlalchemy.orm import Session
 
 from core.user_permissions import (
     check_super_admin,
