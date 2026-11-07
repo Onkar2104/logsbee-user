@@ -34,18 +34,12 @@ from slowapi.errors import RateLimitExceeded
 
 app = FastAPI(title="User Management API")
 
-# Browser origins are configured through CORS_ORIGINS in the environment.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        origin.strip()
-        for origin in settings.cors_origins.split(",")
-        if origin.strip()
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS origins are configured through CORS_ORIGINS in the environment.
+cors_origins = [
+    origin.strip()
+    for origin in settings.cors_origins.split(",")
+    if origin.strip()
+]
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -67,3 +61,14 @@ app.include_router(auth_router)
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+# Wrap the complete ASGI application so CORS headers are also present on
+# unhandled 500 responses (useful while diagnosing backend exceptions).
+app = CORSMiddleware(
+    app=app,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
