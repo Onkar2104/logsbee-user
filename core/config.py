@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     otp_expiry_seconds: int = 300
     otp_resend_cooldown_seconds: int = 60
     otp_max_attempts: int = 5
+    otp_request_limit_per_minute: int = 3
+
+    # Lock an account for this many minutes after repeated wrong passwords.
+    login_max_failed_attempts: int = 5
+    login_attempt_window_seconds: int = 900
+    login_lockout_minutes: int = 15
 
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
