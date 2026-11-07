@@ -95,3 +95,22 @@ All endpoints require a valid access token:
 - `DELETE /api/roles/{role_id}` — soft-delete an unassigned custom role (requires `roles.manage`)
 
 Account Admins and Platform Super Admins retain their administrative bypass. Custom roles are account-scoped. A role cannot be read or modified across account boundaries.
+
+
+## Public VoiceDocs organization registration
+
+The public registration flow is separate from the Super Admin-only `POST /api/accounts/` endpoint.
+
+- `POST /api/accounts/register` creates a pending organization and its initial Account Admin, then sends an email verification OTP to the Admin email.
+- `POST /api/accounts/register/resend-otp` requests another OTP for a pending registration.
+- The Admin verifies the OTP through `POST /api/users/{user_id}/verification/email` with `{"otp":"123456"}`.
+- The organization is activated only after the Admin email is verified. Account users cannot log in while email verification is incomplete.
+- OTP expiry, attempt limits, resend cooldown, and request rate limits use the existing verification configuration.
+
+For an existing MySQL database, back up the database and run this migration once before deploying the application:
+
+```bash
+mysql -u YOUR_DB_USER -p YOUR_DATABASE < migrations/004_public_account_registration_mysql.sql
+```
+
+For a new database, `Base.metadata.create_all()` creates the column from the model; do not run the migration on a new database where the column already exists.
