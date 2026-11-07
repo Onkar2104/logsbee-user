@@ -60,6 +60,9 @@ def get_current_user_profile(
         "account": {
             "id": str(account.account_id),
             "name": account.name,
+            "email": account.email,
+            "contact": account.contact,
+            "address": account.address,
             "is_active": account.is_active,
             "is_deleted": account.is_deleted,
         } if account else None,
