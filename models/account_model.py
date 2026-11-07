@@ -26,9 +26,6 @@ class Account(Base):
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    is_registration_pending: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
