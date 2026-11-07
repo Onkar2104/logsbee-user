@@ -99,18 +99,8 @@ Account Admins and Platform Super Admins retain their administrative bypass. Cus
 
 ## Public VoiceDocs organization registration
 
-The public registration flow is separate from the Super Admin-only `POST /api/accounts/` endpoint.
-
-- `POST /api/accounts/register` creates a pending organization and its initial Account Admin, then sends an email verification OTP to the Admin email.
-- `POST /api/accounts/register/resend-otp` requests another OTP for a pending registration.
+- `POST /api/accounts/register` is the public endpoint for creating an organization and its initial Account Admin.
+- `POST /api/accounts/register/resend-otp` requests another verification OTP for a pending registration.
 - The Admin verifies the OTP through `POST /api/users/{user_id}/verification/email` with `{"otp":"123456"}`.
-- The organization is activated only after the Admin email is verified. Account users cannot log in while email verification is incomplete.
-- OTP expiry, attempt limits, resend cooldown, and request rate limits use the existing verification configuration.
-
-For an existing MySQL database, back up the database and run this migration once before deploying the application:
-
-```bash
-mysql -u YOUR_DB_USER -p YOUR_DATABASE < migrations/004_public_account_registration_mysql.sql
-```
-
-For a new database, `Base.metadata.create_all()` creates the column from the model; do not run the migration on a new database where the column already exists.
+- The existing `accounts.is_active` column is used to keep an organization inactive until the Admin email is verified. No database columns or migrations are added for registration.
+- Account users cannot log in while email verification is incomplete. OTP expiry, attempt limits, resend cooldown, and rate limits use the existing verification configuration.
