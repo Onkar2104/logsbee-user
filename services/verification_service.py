@@ -453,11 +453,10 @@ class VerificationService:
                 user.is_email_verified = True
                 if (
                     user.account is not None
-                    and user.account.is_registration_pending
+                    and not user.account.is_active
                     and not user.account.is_deleted
                 ):
                     user.account.is_active = True
-                    user.account.is_registration_pending = False
 
             elif purpose == "phone_verification":
 
