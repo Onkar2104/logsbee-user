@@ -34,7 +34,6 @@ class AccountRegistrationService:
             contact=data.contact or data.admin.contact,
             address=data.address,
             is_active=False,
-            is_registration_pending=True,
             created_by=None,
         )
 
@@ -99,7 +98,7 @@ class AccountRegistrationService:
         if (
             user is None
             or user.account is None
-            or not user.account.is_registration_pending
+            or user.account.is_active
             or user.is_email_verified
             or user.is_deleted
         ):
