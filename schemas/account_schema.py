@@ -22,14 +22,20 @@ class AccountCreate(BaseModel):
 
 class AccountRegistrationCreate(BaseModel):
     name: str = Field(min_length=2, max_length=150)
-    email: Optional[str] = Field(default=None, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
     contact: Optional[str] = Field(default=None, max_length=20)
     address: Optional[str] = None
     admin: AccountAdminCreate
 
 
 class RegistrationResendRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
+    account_id: uuid.UUID
+    verification_type: str = Field(pattern=r"^(account|admin)$")
+
+
+class AccountEmailVerificationRequest(BaseModel):
+    account_id: uuid.UUID
+    otp: str = Field(pattern=r"^[0-9]{6}$")
 
 
 class RegistrationResponse(BaseModel):
@@ -37,6 +43,7 @@ class RegistrationResponse(BaseModel):
     admin_user_id: uuid.UUID
     email: str
     verification_email_sent: bool
+    next_step: str
     message: str
 
 
