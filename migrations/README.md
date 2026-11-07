@@ -74,7 +74,17 @@ Account Admins and Platform Super Admins retain their administrative bypass. Cus
 ## Public VoiceDocs organization registration
 
 - `POST /api/accounts/register` is the public endpoint for creating an organization and its initial Account Admin.
-- `POST /api/accounts/register/resend-otp` requests another verification OTP for a pending registration.
-- The Admin verifies the OTP through `POST /api/users/{user_id}/verification/email` with `{"otp":"123456"}`.
-- The existing `accounts.is_active` column is used to keep an organization inactive until the Admin email is verified. No database columns or migrations are added for registration.
-- Account users cannot log in while email verification is incomplete. OTP expiry, attempt limits, resend cooldown, and rate limits use the existing verification configuration.
+- The organization email is verified first through `POST /api/accounts/register/verify-account-email` with `{"account_id":"...","otp":"123456"}`.
+- Only after organization email verification, the backend sends the Admin email OTP. The Admin verifies it through `POST /api/users/{user_id}/verification/email` with `{"otp":"123456"}`.
+- `POST /api/accounts/register/resend-otp` accepts `account_id` and `verification_type` (`account` or `admin`) to resend the appropriate OTP. Admin OTP resend is blocked until the organization email is verified.
+- The organization is activated only after both `accounts.is_email_verified` and `users.is_email_verified` are true. Existing `accounts.is_active` remains false until the second verification succeeds.
+- The `accounts.is_email_verified` column is added by `migrations/004_account_email_verification_mysql.sql`. Existing organizations receive the default value `1` (already verified); new public registrations explicitly set it to `0`.
+- Account users cannot access VoiceDocs until both email verifications are complete. OTP expiry, attempt limits, resend cooldown, and rate limits use the existing verification configuration.
+
+For an existing MySQL database, back up the database and run this migration once before deploying the updated backend:
+
+```bash
+mysql -u YOUR_DB_USER -p YOUR_DATABASE < migrations/004_account_email_verification_mysql.sql
+```
+
+For a new database, the SQLAlchemy model creates the column through `Base.metadata.create_all()`; do not run this migration if the column already exists.
