@@ -8,6 +8,7 @@ from schemas.account_schema import (
     AccountRegistrationCreate,
     RegistrationResendRequest,
     RegistrationResponse,
+    AccountEmailVerificationRequest,
 )
 from schemas.verification_schema import VerificationResponse
 
@@ -29,6 +30,18 @@ def register_account(
 
 
 @router.post(
+    "/register/verify-account-email",
+)
+@limiter.limit("5/minute")
+def verify_account_email(
+    request: Request,
+    data: AccountEmailVerificationRequest,
+    db: Session = Depends(get_db),
+):
+    return AccountController.verify_account_email(db, data.account_id, data.otp)
+
+
+@router.post(
     "/register/resend-otp",
     response_model=VerificationResponse,
 )
@@ -38,4 +51,6 @@ def resend_registration_otp(
     data: RegistrationResendRequest,
     db: Session = Depends(get_db),
 ):
-    return AccountController.resend_registration_otp(db, data.email)
+    return AccountController.resend_registration_otp(
+        db, data.account_id, data.verification_type
+    )
