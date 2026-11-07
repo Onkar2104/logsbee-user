@@ -24,7 +24,6 @@ router = APIRouter(
     "/password",
     response_model=LoginResponse,
 )
-@limiter.limit("5/minute")
 def login(
     request: Request,
     credentials: LoginRequest,
