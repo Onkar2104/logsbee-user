@@ -182,7 +182,7 @@ class VerificationService:
             purpose,
         )
 
-        if latest is not None:
+        if latest is not None and latest.consumed_at is None:
 
             cooldown_end = latest.created_at + timedelta(
                 seconds=settings.otp_resend_cooldown_seconds
