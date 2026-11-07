@@ -29,7 +29,7 @@ def utc_now() -> datetime:
 class VerificationService:
 
     ALLOWED_PURPOSES = {
-        "email": {"email_verification", "login_2fa"},
+        "email": {"email_verification", "account_email_verification", "login_2fa"},
         "whatsapp": {"phone_verification"},
     }
 
@@ -103,6 +103,7 @@ class VerificationService:
         user_id: uuid.UUID,
         channel: str,
         purpose: str = "email_verification",
+        destination_override: str | None = None,
     ):
 
         VerificationService._validate_purpose(
@@ -117,6 +118,14 @@ class VerificationService:
 
     
         if channel == "email":
+
+            if purpose == "account_email_verification":
+                if user.account is None or user.account.is_email_verified or user.account.is_deleted:
+                    raise HTTPException(status_code=400, detail="Organization email is already verified or unavailable")
+                if not destination_override:
+                    raise HTTPException(status_code=400, detail="Organization email is required")
+            elif purpose == "email_verification" and user.account is not None and not user.account.is_email_verified:
+                raise HTTPException(status_code=403, detail="Verify the organization email first")
 
             if (
                 purpose == "email_verification"
@@ -136,7 +145,7 @@ class VerificationService:
                     detail="Please verify your email first",
                 )
 
-            destination = user.email
+            destination = destination_override or user.email
 
         elif channel == "whatsapp":
 
@@ -220,8 +229,8 @@ class VerificationService:
                 db,
                 user_id,
                 channel,
-                now,
                 purpose,
+                now,
             )
 
             VerificationRepository.create(
@@ -310,8 +319,12 @@ class VerificationService:
         )
 
   
-        if purpose == "email_verification":
-
+        if purpose == "account_email_verification":
+            if user.account is None or user.account.is_email_verified or user.account.is_deleted:
+                return {"message": "Organization email is already verified or unavailable"}
+        elif purpose == "email_verification":
+            if user.account is not None and not user.account.is_email_verified:
+                raise HTTPException(status_code=403, detail="Verify the organization email first")
             if user.is_email_verified:
                 return {"message": "Already verified"}
 
@@ -448,11 +461,13 @@ class VerificationService:
             record.consumed_at = now
 
         
-            if purpose == "email_verification":
-
+            if purpose == "account_email_verification":
+                user.account.is_email_verified = True
+            elif purpose == "email_verification":
                 user.is_email_verified = True
                 if (
                     user.account is not None
+                    and user.account.is_email_verified
                     and not user.account.is_active
                     and not user.account.is_deleted
                 ):
