@@ -88,12 +88,6 @@ class LoginService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        if user.account_id is not None and not user.is_email_verified:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Please verify your email address before signing in.",
-            )
-
         LoginService._check_account_active(user)
         LoginService._check_password_expiry(user)
 
@@ -179,12 +173,6 @@ class LoginService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token",
-            )
-
-        if user.account_id is not None and not user.is_email_verified:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Email verification is required.",
             )
 
         LoginService._check_account_active(user)
