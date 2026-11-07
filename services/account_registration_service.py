@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,12 +14,25 @@ from services.verification_service import VerificationService
 class AccountRegistrationService:
     @staticmethod
     def register_account(db: Session, data: AccountRegistrationCreate):
-        admin_email = str(data.admin.email).strip().lower()
+        organization_email = data.email.strip().lower()
+        admin_email = data.admin.email.strip().lower()
 
         if UserRepository.get_by_email(db, admin_email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An account already exists with this email address.",
+                detail="An account already exists with the Admin email address.",
+            )
+
+        existing_account = db.scalar(
+            select(Account).where(
+                Account.email == organization_email,
+                Account.is_deleted.is_(False),
+            )
+        )
+        if existing_account:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An organization already exists with this email address.",
             )
 
         admin_role = UserRepository.get_by_user_role(db, "admin")
@@ -30,9 +44,10 @@ class AccountRegistrationService:
 
         account = Account(
             name=data.name.strip(),
-            email=(str(data.email).strip().lower() if data.email else admin_email),
+            email=organization_email,
             contact=data.contact or data.admin.contact,
             address=data.address,
+            is_email_verified=False,
             is_active=False,
             created_by=None,
         )
@@ -47,9 +62,7 @@ class AccountRegistrationService:
                 last_name=data.admin.last_name.strip(),
                 email=admin_email,
                 contact=data.admin.contact or data.contact,
-                password_hash=hash_password(
-                    data.admin.password.get_secret_value()
-                ),
+                password_hash=hash_password(data.admin.password.get_secret_value()),
                 user_role_id=admin_role.id,
                 created_by=None,
                 is_email_verified=False,
@@ -71,42 +84,118 @@ class AccountRegistrationService:
 
         email_sent = True
         try:
-            VerificationService.send_otp(db, admin.id, "email")
+            VerificationService.send_otp(
+                db,
+                admin.id,
+                "email",
+                purpose="account_email_verification",
+                destination_override=account.email,
+            )
         except HTTPException:
-            # Keep the account pending and return its ID so the visitor can
-            # request another code without attempting duplicate registration.
             email_sent = False
 
         return {
             "account_id": account.account_id,
             "admin_user_id": admin.id,
-            "email": admin.email,
+            "email": account.email,
             "verification_email_sent": email_sent,
+            "next_step": "account_email",
             "message": (
-                "Registration started. Check your email for the verification code."
+                "Organization registered. Verify the organization email first."
                 if email_sent
-                else "Your registration is saved but the verification email could not be sent. Use Resend code to try again."
+                else "Organization registration is saved, but the organization verification email could not be sent. Resend the code to continue."
             ),
         }
 
     @staticmethod
-    def resend_registration_otp(db: Session, email: str):
-        normalized_email = email.strip().lower()
-        user = UserRepository.get_by_email(db, normalized_email)
+    def verify_account_email(db: Session, account_id, otp: str):
+        account = db.get(Account, account_id)
+        if account is None or account.is_deleted:
+            raise HTTPException(status_code=404, detail="Organization registration not found")
 
-        # Keep the response generic to avoid revealing whether an email is registered.
-        if (
-            user is None
-            or user.account is None
-            or user.account.is_active
-            or user.is_email_verified
-            or user.is_deleted
-        ):
-            return {
-                "message": "If a pending registration exists for this email, a verification code has been sent."
-            }
+        admin = db.scalar(
+            select(User).where(
+                User.account_id == account.account_id,
+                User.is_deleted.is_(False),
+            ).order_by(User.created_at.asc())
+        )
+        if admin is None:
+            raise HTTPException(status_code=404, detail="Initial Admin account not found")
 
-        VerificationService.send_otp(db, user.id, "email")
+        result = VerificationService.verify_otp(
+            db,
+            admin.id,
+            "email",
+            otp,
+            purpose="account_email_verification",
+        )
+
+        admin_otp_sent = True
+        try:
+            VerificationService.send_otp(
+                db,
+                admin.id,
+                "email",
+                purpose="email_verification",
+            )
+        except HTTPException:
+            admin_otp_sent = False
+
         return {
-            "message": "If a pending registration exists for this email, a verification code has been sent."
+            "account_id": account.account_id,
+            "admin_user_id": admin.id,
+            "admin_email": admin.email,
+            "admin_verification_email_sent": admin_otp_sent,
+            "next_step": "admin_email",
+            "message": (
+                "Organization email verified. Now verify the initial Admin email."
+                if admin_otp_sent
+                else "Organization email verified, but the Admin verification email could not be sent. Resend the Admin code."
+            ),
         }
+
+    @staticmethod
+    def resend_registration_otp(db: Session, account_id, verification_type: str):
+        account = db.get(Account, account_id)
+        generic_message = "If this registration is pending, a verification code has been sent."
+
+        if account is None or account.is_deleted:
+            return {"message": generic_message}
+
+        admin = db.scalar(
+            select(User).where(
+                User.account_id == account.account_id,
+                User.is_deleted.is_(False),
+            ).order_by(User.created_at.asc())
+        )
+        if admin is None or account.is_active:
+            return {"message": generic_message}
+
+        if verification_type == "account":
+            if account.is_email_verified:
+                return {"message": "Organization email is already verified."}
+            VerificationService.send_otp(
+                db,
+                admin.id,
+                "email",
+                purpose="account_email_verification",
+                destination_override=account.email,
+            )
+        elif verification_type == "admin":
+            if not account.is_email_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Verify the organization email before requesting Admin email verification.",
+                )
+            if admin.is_email_verified:
+                return {"message": "Admin email is already verified."}
+            VerificationService.send_otp(
+                db,
+                admin.id,
+                "email",
+                purpose="email_verification",
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid verification type")
+
+        return {"message": generic_message}
