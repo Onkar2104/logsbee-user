@@ -10,5 +10,11 @@ class AccountController:
         return AccountRegistrationService.register_account(db, data)
 
     @staticmethod
-    def resend_registration_otp(db: Session, email: str):
-        return AccountRegistrationService.resend_registration_otp(db, email)
+    def verify_account_email(db: Session, account_id, otp: str):
+        return AccountRegistrationService.verify_account_email(db, account_id, otp)
+
+    @staticmethod
+    def resend_registration_otp(db: Session, account_id, verification_type: str):
+        return AccountRegistrationService.resend_registration_otp(
+            db, account_id, verification_type
+        )
