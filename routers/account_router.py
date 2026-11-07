@@ -1,22 +1,56 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from controllers.account_controller import AccountController
-from core.auth_dependencies import get_current_user
 from core.database import get_db
-from schemas.account_schema import AccountCreate, AccountCreatedResponse
+from core.limiter import limiter
+from schemas.account_schema import (
+    AccountRegistrationCreate,
+    RegistrationResendRequest,
+    RegistrationResponse,
+    AccountEmailVerificationRequest,
+)
+from schemas.verification_schema import VerificationResponse
 
 router = APIRouter(prefix="/api/accounts", tags=["Accounts"])
 
 
 @router.post(
-    "/",
-    response_model=AccountCreatedResponse,
+    "/register",
+    response_model=RegistrationResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_account(
-    data: AccountCreate,
+@limiter.limit("3/hour")
+def register_account(
+    request: Request,
+    data: AccountRegistrationCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
 ):
-    return AccountController.create_account(db, data, current_user)
+    return AccountController.register_account(db, data)
+
+
+@router.post(
+    "/register/verify-account-email",
+)
+@limiter.limit("5/minute")
+def verify_account_email(
+    request: Request,
+    data: AccountEmailVerificationRequest,
+    db: Session = Depends(get_db),
+):
+    return AccountController.verify_account_email(db, data.account_id, data.otp)
+
+
+@router.post(
+    "/register/resend-otp",
+    response_model=VerificationResponse,
+)
+@limiter.limit("3/minute")
+def resend_registration_otp(
+    request: Request,
+    data: RegistrationResendRequest,
+    db: Session = Depends(get_db),
+):
+    return AccountController.resend_registration_otp(
+        db, data.account_id, data.verification_type
+    )

@@ -26,32 +26,6 @@ Existing users with the `Super admin` role remain platform users with `account_i
 
 For a brand-new database, the application imports all models and `Base.metadata.create_all()` creates the tables. The SQL migration is intended only for an existing database.
 
-## Account creation API
-
-Only an authenticated platform Super Admin can create an account and its initial Admin user. Both rows are committed in one transaction.
-
-`POST /api/accounts/`
-
-Example body:
-
-```json
-{
-  "name": "Acme Technologies",
-  "email": "admin@acme.example",
-  "contact": "+911234567890",
-  "address": "Pune, Maharashtra",
-  "admin": {
-    "first_name": "Aarav",
-    "last_name": "Shah",
-    "email": "aarav@acme.example",
-    "password": "Use-a-strong-temporary-password",
-    "contact": "+919876543210"
-  }
-}
-```
-
-The account's first user is assigned the protected system `admin` role and receives the new account's `account_id`. The account itself does not store a password; authentication remains user-based.
-
 ## Account user creation API
 
 An authenticated Account Admin can create users only inside their own account:
@@ -95,3 +69,22 @@ All endpoints require a valid access token:
 - `DELETE /api/roles/{role_id}` — soft-delete an unassigned custom role (requires `roles.manage`)
 
 Account Admins and Platform Super Admins retain their administrative bypass. Custom roles are account-scoped. A role cannot be read or modified across account boundaries.
+
+
+## Public VoiceDocs organization registration
+
+- `POST /api/accounts/register` is the public endpoint for creating an organization and its initial Account Admin.
+- The organization email is verified first through `POST /api/accounts/register/verify-account-email` with `{"account_id":"...","otp":"123456"}`.
+- Only after organization email verification, the backend sends the Admin email OTP. The Admin verifies it through `POST /api/users/{user_id}/verification/email` with `{"otp":"123456"}`.
+- `POST /api/accounts/register/resend-otp` accepts `account_id` and `verification_type` (`account` or `admin`) to resend the appropriate OTP. Admin OTP resend is blocked until the organization email is verified.
+- The organization is activated only after both `accounts.is_email_verified` and `users.is_email_verified` are true. Existing `accounts.is_active` remains false until the second verification succeeds.
+- The `accounts.is_email_verified` column is added by `migrations/004_account_email_verification_mysql.sql`. Existing organizations receive the default value `1` (already verified); new public registrations explicitly set it to `0`.
+- Account users cannot access VoiceDocs until both email verifications are complete. OTP expiry, attempt limits, resend cooldown, and rate limits use the existing verification configuration.
+
+For an existing MySQL database, back up the database and run this migration once before deploying the updated backend:
+
+```bash
+mysql -u YOUR_DB_USER -p YOUR_DATABASE < migrations/004_account_email_verification_mysql.sql
+```
+
+For a new database, the SQLAlchemy model creates the column through `Base.metadata.create_all()`; do not run this migration if the column already exists.
