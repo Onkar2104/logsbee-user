@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import uuid
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.security import (
@@ -11,9 +12,11 @@ from core.security import (
     decode_token,
 )
 
+from models.login_attempt_model import LoginAttempt
 from repositories.user_repository import UserRepository
 from repositories.verification_repository import VerificationRepository
 from services.verification_service import VerificationService
+from core.config import settings
 
 
 class LoginService:
@@ -68,9 +71,12 @@ class LoginService:
         password: str,
     ):
 
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        LoginService._check_login_lock(db, email, now)
+
         user = UserRepository.get_by_email(
             db,
-            email,
+            email.strip().lower(),
         )
 
         if (
@@ -78,10 +84,10 @@ class LoginService:
             or user.is_deleted
             or not verify_password(
                 password,
-                user.password_hash,
+                user.password_hash if user else "",
             )
         ):
-
+            LoginService._record_failed_login(db, email, now)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
