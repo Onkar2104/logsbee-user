@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.security import (
@@ -20,6 +19,58 @@ from core.config import settings
 
 
 class LoginService:
+
+    @staticmethod
+    def _check_login_lock(db: Session, email: str, now: datetime):
+        normalized_email = email.strip().lower()
+        attempt = db.get(LoginAttempt, normalized_email)
+        if attempt is None:
+            return
+        if attempt.locked_until and attempt.locked_until > now:
+            remaining = max(1, int((attempt.locked_until - now).total_seconds()))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many incorrect login attempts. Try again in {remaining} seconds.",
+                headers={"Retry-After": str(remaining)},
+            )
+        if (now - attempt.window_started_at).total_seconds() >= settings.login_attempt_window_seconds:
+            attempt.failed_attempts = 0
+            attempt.window_started_at = now
+            attempt.locked_until = None
+            db.commit()
+
+    @staticmethod
+    def _record_failed_login(db: Session, email: str, now: datetime):
+        normalized_email = email.strip().lower()
+        attempt = db.get(LoginAttempt, normalized_email)
+        if attempt is None:
+            attempt = LoginAttempt(
+                email=normalized_email,
+                failed_attempts=0,
+                window_started_at=now,
+            )
+            db.add(attempt)
+        if (now - attempt.window_started_at).total_seconds() >= settings.login_attempt_window_seconds:
+            attempt.failed_attempts = 0
+            attempt.window_started_at = now
+            attempt.locked_until = None
+        attempt.failed_attempts += 1
+        if attempt.failed_attempts >= settings.login_max_failed_attempts:
+            attempt.locked_until = now + timedelta(minutes=settings.login_lockout_minutes)
+        db.commit()
+        if attempt.locked_until and attempt.locked_until > now:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Five incorrect login attempts reached. Try again in {settings.login_lockout_minutes} minutes.",
+                headers={"Retry-After": str(settings.login_lockout_minutes * 60)},
+            )
+
+    @staticmethod
+    def _clear_failed_logins(db: Session, email: str):
+        attempt = db.get(LoginAttempt, email.strip().lower())
+        if attempt is not None:
+            db.delete(attempt)
+            db.commit()
 
     @staticmethod
     def _check_account_active(user):
@@ -94,6 +145,7 @@ class LoginService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        LoginService._clear_failed_logins(db, email)
         LoginService._check_account_active(user)
         LoginService._check_password_expiry(user)
 
