@@ -22,6 +22,7 @@ class AccountCreate(BaseModel):
 
 class AccountRegistrationCreate(BaseModel):
     name: str = Field(min_length=2, max_length=150)
+    email: Optional[str] = Field(default=None, max_length=255)
     contact: Optional[str] = Field(default=None, max_length=20)
     address: Optional[str] = None
     admin: AccountAdminCreate
