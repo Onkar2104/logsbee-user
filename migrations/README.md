@@ -26,32 +26,6 @@ Existing users with the `Super admin` role remain platform users with `account_i
 
 For a brand-new database, the application imports all models and `Base.metadata.create_all()` creates the tables. The SQL migration is intended only for an existing database.
 
-## Account creation API
-
-Only an authenticated platform Super Admin can create an account and its initial Admin user. Both rows are committed in one transaction.
-
-`POST /api/accounts/`
-
-Example body:
-
-```json
-{
-  "name": "Acme Technologies",
-  "email": "admin@acme.example",
-  "contact": "+911234567890",
-  "address": "Pune, Maharashtra",
-  "admin": {
-    "first_name": "Aarav",
-    "last_name": "Shah",
-    "email": "aarav@acme.example",
-    "password": "Use-a-strong-temporary-password",
-    "contact": "+919876543210"
-  }
-}
-```
-
-The account's first user is assigned the protected system `admin` role and receives the new account's `account_id`. The account itself does not store a password; authentication remains user-based.
-
 ## Account user creation API
 
 An authenticated Account Admin can create users only inside their own account:
