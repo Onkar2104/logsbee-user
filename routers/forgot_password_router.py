@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from core.limiter import limiter
 from controllers.forgot_password_controller import (
     ForgotPasswordController,
 )
@@ -17,7 +18,9 @@ router = APIRouter(
 
 
 @router.post("/send-otp")
+@limiter.limit("3/minute")
 def send_otp(
+    request: Request,
     data: ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
@@ -28,7 +31,9 @@ def send_otp(
 
 
 @router.post("/reset")
+@limiter.limit("5/minute")
 def reset_password(
+    request: Request,
     data: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ):
