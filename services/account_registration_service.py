@@ -30,7 +30,7 @@ class AccountRegistrationService:
 
         account = Account(
             name=data.name.strip(),
-            email=admin_email,
+            email=(str(data.email).strip().lower() if data.email else admin_email),
             contact=data.contact or data.admin.contact,
             address=data.address,
             is_active=False,
