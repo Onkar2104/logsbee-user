@@ -163,9 +163,20 @@ class LoginService:
 
         user_id = payload.get("sub")
 
+        # The JWT subject must be a valid UUID before it reaches SQLAlchemy.
+        # A malformed subject should be treated as an invalid token, not a 500.
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (ValueError, TypeError, AttributeError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         user = UserRepository.get_by_id(
             db,
-            user_id,
+            user_uuid,
         )
 
         if not user or user.is_deleted:
