@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from core.database import get_db
+from core.limiter import limiter
 from schemas.verification_schema import (
     OTPRequest,
     VerificationResponse,
@@ -19,18 +20,20 @@ router = APIRouter(
     "/{user_id}/verification/email",
     response_model=VerificationResponse,
 )
+@limiter.limit("5/minute")
 def email_verification(
+    request: Request,
     user_id: UUID,
-    request: OTPRequest,
+    otp_request: OTPRequest,
     db: Session = Depends(get_db),
 ):
-    if request.otp is None:
+    if otp_request.otp is None:
         return VerificationController.send_email_otp(
             db, user_id
         )
 
     return VerificationController.verify_email_otp(
-        db, user_id, request.otp
+        db, user_id, otp_request.otp
     )
 
 
@@ -39,15 +42,16 @@ def email_verification(
 #     response_model=VerificationResponse,
 # )
 # def whatsapp_verification(
+#     request: Request,
 #     user_id: UUID,
-#     request: OTPRequest,
+#     otp_request: OTPRequest,
 #     db: Session = Depends(get_db),
 # ):
-#     if request.otp is None:
+#     if otp_request.otp is None:
 #         return VerificationController.send_whatsapp_otp(
 #             db, user_id
 #         )
-
+#
 #     return VerificationController.verify_whatsapp_otp(
-#         db, user_id, request.otp
+#         db, user_id, otp_request.otp
 #     )
