@@ -20,6 +20,25 @@ class AccountCreate(BaseModel):
     admin: AccountAdminCreate
 
 
+class AccountRegistrationCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=150)
+    contact: Optional[str] = Field(default=None, max_length=20)
+    address: Optional[str] = None
+    admin: AccountAdminCreate
+
+
+class RegistrationResendRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+
+
+class RegistrationResponse(BaseModel):
+    account_id: uuid.UUID
+    admin_user_id: uuid.UUID
+    email: str
+    verification_email_sent: bool
+    message: str
+
+
 class AccountCreatedResponse(BaseModel):
     account_id: uuid.UUID
     name: str
