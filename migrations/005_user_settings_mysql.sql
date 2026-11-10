@@ -1,6 +1,6 @@
 -- Logsbee User: create account-level settings table.
 -- Run once on existing MySQL databases after backing up the database.
-CREATE TABLE user_settings (
+CREATE TABLE IF NOT EXISTS user_settings (
     id CHAR(32) NOT NULL,
     user_id CHAR(32) NOT NULL,
     two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
