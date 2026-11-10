@@ -88,3 +88,22 @@ mysql -u YOUR_DB_USER -p YOUR_DATABASE < migrations/004_account_email_verificati
 ```
 
 For a new database, the SQLAlchemy model creates the column through `Base.metadata.create_all()`; do not run this migration if the column already exists.
+
+
+## Phase 3: Dedicated user settings and 2FA
+
+The Logsbee User service owns account-level two-factor authentication. The setting is stored in the dedicated `user_settings` table; it is not stored in the VoiceDocs database.
+
+For an existing MySQL database:
+
+1. Back up the database.
+2. Deploy the updated model/code only after the migration is ready.
+3. Run the migration once:
+
+```bash
+mysql -u YOUR_DB_USER -p YOUR_DATABASE < migrations/005_user_settings_mysql.sql
+```
+
+The migration creates one settings row per existing user, copies the previous `users.is_two_factor_authenticated` value into `user_settings.two_factor_enabled`, and removes the old column. The application continues exposing `is_two_factor_authenticated` in the user profile response as a compatibility property backed by the settings table.
+
+For a new database, `Base.metadata.create_all()` creates `user_settings` from the imported model.
