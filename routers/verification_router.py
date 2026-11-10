@@ -10,6 +10,7 @@ from schemas.verification_schema import (
 from controllers.verification_controller import VerificationController
 from core.auth_dependencies import get_current_user
 from services.verification_service import VerificationService
+from services.user_settings_service import get_or_create_user_settings
 
 router = APIRouter(
     prefix="/api/users",
@@ -77,6 +78,6 @@ def disable_two_factor(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    current_user.is_two_factor_authenticated = False
+    get_or_create_user_settings(db, current_user.id).two_factor_enabled = False
     db.commit()
     return {"message": "Two-factor authentication disabled"}
