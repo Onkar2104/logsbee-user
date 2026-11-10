@@ -13,6 +13,7 @@ from core.security import (
 
 from repositories.user_repository import UserRepository
 from repositories.verification_repository import VerificationRepository
+from services.user_settings_service import get_or_create_user_settings
 from services.verification_service import VerificationService
 
 
@@ -92,7 +93,7 @@ class LoginService:
         LoginService._check_password_expiry(user)
 
         # Check whether 2FA is enabled.
-        if user.is_two_factor_authenticated:
+        if get_or_create_user_settings(db, user.id).two_factor_enabled:
 
             return VerificationService.send_otp(
                 db=db,
@@ -136,7 +137,7 @@ class LoginService:
 
         if (
             user.is_deleted
-            or not user.is_two_factor_authenticated
+            or not get_or_create_user_settings(db, user.id).two_factor_enabled
             or not user.is_email_verified
         ):
 
