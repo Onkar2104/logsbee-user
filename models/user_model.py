@@ -61,7 +61,6 @@ class User(Base):
     )
     user_role = relationship("UserRole", back_populates="users", lazy="select")
 
-    is_two_factor_authenticated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_contact_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
