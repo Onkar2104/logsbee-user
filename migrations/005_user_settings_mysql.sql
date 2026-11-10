@@ -16,3 +16,6 @@ CREATE TABLE user_settings (
 INSERT INTO user_settings (id, user_id, two_factor_enabled, created_at, updated_at)
 SELECT REPLACE(UUID(), '-', ''), id, is_two_factor_authenticated, UTC_TIMESTAMP(), UTC_TIMESTAMP()
 FROM users;
+
+-- The dedicated settings row is now the only source of 2FA state.
+ALTER TABLE users DROP COLUMN is_two_factor_authenticated;
