@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/accounts", tags=["Accounts"])
     response_model=RegistrationResponse,
     status_code=status.HTTP_201_CREATED,
 )
-@limiter.limit("3/hour")
+@limiter.limit("10/hour")
 def register_account(
     request: Request,
     data: AccountRegistrationCreate,

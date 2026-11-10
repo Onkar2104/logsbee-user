@@ -7,10 +7,16 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    email_provider: str = ""
+
     gmail_address: str = ""
     gmail_app_password: str = ""
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 465
+
+    mailjet_apikey_public: str = ""
+    mailjet_apikey_private: str = ""
+    mailjet_sender_email: str = ""
 
     # meta_access_token: str = ""
     # meta_phone_number_id: str = ""
