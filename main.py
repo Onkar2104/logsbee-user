@@ -16,6 +16,7 @@ from models.account_product_model import AccountProduct
 from models.user_product_model import UserProduct
 from models.otp_verification_model import VerificationOTP
 from models.password_reset_otp_model import PasswordResetOTP
+from models.user_settings_model import UserSettings
 
 from routers.user_router import router as user_router
 from routers.account_router import router as account_router
