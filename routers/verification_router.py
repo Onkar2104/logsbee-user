@@ -17,6 +17,23 @@ router = APIRouter(
 )
 
 
+@router.post("/me/two-factor/email")
+def manage_two_factor_email(
+    request: OTPRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Enroll or verify email-based 2FA for the authenticated user only."""
+    if request.otp is None:
+        return VerificationService.send_otp(
+            db, current_user.id, "email", purpose="two_factor_activation"
+        )
+    return VerificationService.verify_otp(
+        db, current_user.id, "email", request.otp,
+        purpose="two_factor_activation",
+    )
+
+
 @router.post(
     "/{user_id}/verification/email",
     response_model=VerificationResponse,
@@ -53,23 +70,6 @@ def email_verification(
 #     return VerificationController.verify_whatsapp_otp(
 #         db, user_id, request.otp
 #     )
-
-
-@router.post("/me/two-factor/email")
-def manage_two_factor_email(
-    request: OTPRequest,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    """Enroll or verify email-based 2FA for the authenticated user only."""
-    if request.otp is None:
-        return VerificationService.send_otp(
-            db, current_user.id, "email", purpose="two_factor_activation"
-        )
-    return VerificationService.verify_otp(
-        db, current_user.id, "email", request.otp,
-        purpose="two_factor_activation",
-    )
 
 
 @router.delete("/me/two-factor")
