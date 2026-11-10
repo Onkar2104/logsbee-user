@@ -29,7 +29,7 @@ def utc_now() -> datetime:
 class VerificationService:
 
     ALLOWED_PURPOSES = {
-        "email": {"email_verification", "account_email_verification", "login_2fa"},
+        "email": {"email_verification", "account_email_verification", "login_2fa", "two_factor_activation"},
         "whatsapp": {"phone_verification"},
     }
 
@@ -137,7 +137,7 @@ class VerificationService:
                 )
 
             if (
-                purpose == "login_2fa"
+                purpose in {"login_2fa", "two_factor_activation"}
                 and not user.is_email_verified
             ):
                 raise HTTPException(
@@ -333,6 +333,12 @@ class VerificationService:
             if user.is_contact_verified:
                 return {"message": "Already verified"}
 
+        elif purpose == "two_factor_activation":
+            if not user.is_email_verified:
+                raise HTTPException(status_code=403, detail="Email is not verified")
+            if user.is_two_factor_authenticated:
+                return {"message": "Two-factor authentication is already enabled"}
+
         elif purpose == "login_2fa":
 
             if not user.is_two_factor_authenticated:
@@ -463,6 +469,8 @@ class VerificationService:
         
             if purpose == "account_email_verification":
                 user.account.is_email_verified = True
+            elif purpose == "two_factor_activation":
+                user.is_two_factor_authenticated = True
             elif purpose == "email_verification":
                 user.is_email_verified = True
                 if (
