@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
 -- Preserve the current 2FA state during migration.
 INSERT INTO user_settings (id, user_id, two_factor_enabled, created_at, updated_at)
 SELECT REPLACE(UUID(), '-', ''), id, is_two_factor_authenticated, UTC_TIMESTAMP(), UTC_TIMESTAMP()
-FROM users;
+FROM users
+ON DUPLICATE KEY UPDATE two_factor_enabled = VALUES(two_factor_enabled);
 
 -- The dedicated settings row is now the only source of 2FA state.
 ALTER TABLE users DROP COLUMN is_two_factor_authenticated;
