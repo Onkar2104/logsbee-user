@@ -8,6 +8,7 @@ from core.auth_dependencies import get_current_user
 from core.database import get_db
 from controllers.user_controller import UserController
 from schemas.user_schema import UserCreate, UserUpdate, UserResponse, PasswordChange
+from services.user_settings_service import get_or_create_user_settings
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
@@ -50,7 +51,7 @@ def get_current_user_profile(
         "contact": current_user.contact,
         "is_email_verified": current_user.is_email_verified,
         "is_contact_verified": current_user.is_contact_verified,
-        "is_two_factor_authenticated": current_user.is_two_factor_authenticated,
+        "is_two_factor_authenticated": get_or_create_user_settings(db, current_user.id).two_factor_enabled,
         "role": {
             "id": str(role.id),
             "name": role.name,
