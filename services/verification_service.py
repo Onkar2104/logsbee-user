@@ -18,6 +18,7 @@ from providers.email_provider import EmailProvider
 
 from repositories.user_repository import UserRepository
 from repositories.verification_repository import VerificationRepository
+from services.user_settings_service import get_or_create_user_settings
 
 
 def utc_now() -> datetime:
@@ -336,12 +337,12 @@ class VerificationService:
         elif purpose == "two_factor_activation":
             if not user.is_email_verified:
                 raise HTTPException(status_code=403, detail="Email is not verified")
-            if user.is_two_factor_authenticated:
+            if get_or_create_user_settings(db, user.id).two_factor_enabled:
                 return {"message": "Two-factor authentication is already enabled"}
 
         elif purpose == "login_2fa":
 
-            if not user.is_two_factor_authenticated:
+            if not get_or_create_user_settings(db, user.id).two_factor_enabled:
                 raise HTTPException(
                     status_code=400,
                     detail="Two-factor authentication is not enabled",
@@ -470,7 +471,7 @@ class VerificationService:
             if purpose == "account_email_verification":
                 user.account.is_email_verified = True
             elif purpose == "two_factor_activation":
-                user.is_two_factor_authenticated = True
+                get_or_create_user_settings(db, user.id).two_factor_enabled = True
             elif purpose == "email_verification":
                 user.is_email_verified = True
                 if (
