@@ -11,13 +11,13 @@ class PasswordResetOTP(Base):
     __tablename__ = "password_reset_otps"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True),
+        Uuid(as_uuid=True, native_uuid=False),
         primary_key=True,
         default=uuid.uuid4,
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True),
+        Uuid(as_uuid=True, native_uuid=False),
         ForeignKey("users.id"),
         nullable=False,
         index=True,
