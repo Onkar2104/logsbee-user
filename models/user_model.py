@@ -60,6 +60,11 @@ class User(Base):
         index=True,
     )
     user_role = relationship("UserRole", back_populates="users", lazy="select")
+    settings = relationship("UserSettings", back_populates="user", uselist=False, lazy="select")
+
+    @property
+    def is_two_factor_authenticated(self) -> bool:
+        return bool(self.settings and self.settings.two_factor_enabled)
 
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_contact_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
