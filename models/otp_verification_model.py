@@ -1,4 +1,3 @@
-
 import uuid
 from datetime import datetime
 
@@ -18,14 +17,15 @@ from models.base import Base
 class VerificationOTP(Base):
     __tablename__ = "verification_otps"
 
+    # Match users.id storage: CHAR(32) on both MySQL and PostgreSQL.
     id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True),
+        Uuid(as_uuid=True, native_uuid=False),
         primary_key=True,
         default=uuid.uuid4,
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True),
+        Uuid(as_uuid=True, native_uuid=False),
         ForeignKey("users.id"),
         nullable=False,
         index=True,

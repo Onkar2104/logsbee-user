@@ -16,6 +16,7 @@ from models.account_product_model import AccountProduct
 from models.user_product_model import UserProduct
 from models.otp_verification_model import VerificationOTP
 from models.password_reset_otp_model import PasswordResetOTP
+from models.password_history_model import PasswordHistory
 from models.user_settings_model import UserSettings
 
 from routers.user_router import router as user_router
@@ -44,8 +45,8 @@ cors_origins = [
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# For a new database this creates the schema. Existing databases must first
-# run the SQL migration in migrations/001_account_multi_tenancy_mysql.sql.
+# For a new database this creates the schema. Existing databases require
+# explicit migrations; create_all does not alter existing table definitions.
 Base.metadata.create_all(bind=engine)
 seed_roles()
 seed_permissions()
