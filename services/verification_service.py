@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import secrets
 import uuid
+import logging
 
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +20,8 @@ from providers.email_provider import EmailProvider
 from repositories.user_repository import UserRepository
 from repositories.verification_repository import VerificationRepository
 from services.user_settings_service import get_or_create_user_settings
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
@@ -265,6 +268,15 @@ class VerificationService:
             #     )
 
         except Exception:
+            # Keep OTPs and credentials out of logs while preserving the
+            # provider traceback (for example Mailjet HTTP 401/403 errors).
+            logger.exception(
+                "OTP delivery failed: user_id=%s channel=%s purpose=%s provider=%s",
+                user_id,
+                channel,
+                purpose,
+                settings.email_provider if channel == "email" else channel,
+            )
 
             try:
                 record.consumed_at = utc_now()
