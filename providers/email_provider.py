@@ -1,8 +1,11 @@
 
-# import smtplib
+# import logging
+import smtplib
 # from email.message import EmailMessage
 
 # from core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # class EmailProvider:
@@ -131,7 +134,16 @@ Logsbee Team
                 timeout=15,
             )
 
-            response.raise_for_status()
+            if not response.ok:
+                # Mailjet's response body contains the useful diagnostic
+                # (for example invalid API key or sender authorization).
+                # Never log request headers, API keys, or OTP contents.
+                logger.error(
+                    "Mailjet rejected OTP email: status=%s response=%s",
+                    response.status_code,
+                    response.text[:1000],
+                )
+                response.raise_for_status()
 
             result = response.json()
             messages = result.get("Messages", [])
