@@ -87,12 +87,20 @@ class EmailProvider:
 
     @staticmethod
     def _send_using_mailjet(to_email: str, otp: str) -> None:
-        if not all([
-            settings.mailjet_apikey_public,
-            settings.mailjet_apikey_private,
-            settings.mailjet_sender_email,
-        ]):
-            raise RuntimeError("Mailjet is not fully configured")
+        missing_settings = [
+            env_name
+            for env_name, value in (
+                ("MAILJET_APIKEY_PUBLIC", settings.mailjet_apikey_public),
+                ("MAILJET_APIKEY_PRIVATE", settings.mailjet_apikey_private),
+                ("MAILJET_SENDER_EMAIL", settings.mailjet_sender_email),
+            )
+            if not value or not value.strip()
+        ]
+        if missing_settings:
+            raise RuntimeError(
+                "Mailjet configuration is incomplete; missing Render environment "
+                "variable(s): " + ", ".join(missing_settings)
+            )
 
         payload = {
             "Messages": [
